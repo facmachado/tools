@@ -69,7 +69,7 @@ void handle(const char *string, int error) {
  * Help
  */
 void help() {
-  printf("\x1b[1;33mUsage: devseek <-n|-r|-s> <device|partition>\x1b[0m\n");
+  printf("\x1b[1;33mUsage: seektest <-n|-r|-s> <device|partition>\x1b[0m\n");
   exit(EXIT_SUCCESS);
 }
 
@@ -78,7 +78,7 @@ void help() {
  * Normal seek
  */
 void normal_seek(char *device) {
-  printf("Testing %s (%lu blocks, %luMB) in NORMAL mode. Please wait...\n",
+  printf("Check %s (%lu blocks, %luMB) in NORMAL mode. Please wait...\n",
     device, blocks, blocks / 2048);
   while (count <= blocks) {
     offset = (off64_t) count;
@@ -98,7 +98,7 @@ void normal_seek(char *device) {
  */
 void reverse_seek(char *device) {
   unsigned long cdown = blocks;
-  printf("Testing %s (%lu blocks, %luMB) in REVERSE mode. Please wait...\n",
+  printf("Check %s (%lu blocks, %luMB) in REVERSE mode. Please wait...\n",
     device, blocks, blocks / 2048);
   while (cdown > 0) {
     offset = (off64_t) cdown;
@@ -119,11 +119,11 @@ void reverse_seek(char *device) {
  */
 void shuffle_seek(char *device) {
   srand(start);
-  printf("Testing %s (%lu blocks, %luMB) in SHUFFLE mode. Please wait...\n",
+  printf("Check %s (%lu blocks, %luMB) in SHUFFLE mode. Please wait...\n",
     device, blocks, blocks / 2048);
   while (count <= blocks) {
     offset = (off64_t) rand() % blocks;
-    printf("Checking block %lu          \r", offset);
+    printf("Checking block %lu                                    \r", offset);
     retval = lseek64(fd, BLOCKSIZE *offset, SEEK_SET);
     handle("lseek64", retval == (off64_t) -1);
     retval = read(fd, buffer, BLOCKSIZE);
@@ -138,7 +138,7 @@ void shuffle_seek(char *device) {
  * Program start
  */
 int main(int argc, char **argv) {
-  printf("\x1b[1;37mDevSeek v.1.2 - (C) 2017 Flavio Augusto (@facmachado)\x1b[0m\n");
+  printf("\x1b[1;37mSeekTest v.1.3 - (c) 2020 Flavio Augusto (@facmachado)\x1b[0m\n");
   if (argc < 3) help();
 
   setvbuf(stdout, NULL, _IONBF, 0);
