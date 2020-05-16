@@ -1,7 +1,5 @@
 /**
- * seektest.c
- * SeekTest - Device/Partition seek test (mini benchmark)
- *            Version 1.3
+ * seektest.c - Device/Partition seek test (mini benchmark)
  *
  * Copyright (c) 2020 Flavio Augusto (@facmachado)
  *
@@ -39,17 +37,15 @@ off64_t offset;
 
 
 /**
- * Program finish
+ * Help
  */
-void finish() {
-  time(&end);
-  int interval = (int) (end - start);
-  if (count < blocks)
-    printf("\n\x1b[1;31mTest canceled!\x1b[0m\n");
-  else
-    printf("\n\x1b[1;32mTest finished!\x1b[0m\n");
-  printf("Total elapsed: %d seconds, %li seeks/s, %.2f ms access time\n",
-    interval, count / interval, 1000.0 * interval / count);
+void help(const char *arg0) {
+  printf(
+    "\x1b[1;33mUsage: "
+    "%s <-n|-r|-s> "
+    "<device|partition>\x1b[0m\n",
+    arg0
+  );
   exit(EXIT_SUCCESS);
 }
 
@@ -66,27 +62,84 @@ void handle(const char *string, int error) {
 
 
 /**
- * Help
+ * Program finish
  */
-void help() {
-  printf("\x1b[1;33mUsage: seektest <-n|-r|-s> <device|partition>\x1b[0m\n");
+void finish() {
+  time(&end);
+  int interval = (int) (end - start);
+  if (count < blocks)
+    printf("\n\x1b[1;31mStopped!\x1b[0m\n");
+  else
+    printf("\n\x1b[1;32mDone!\x1b[0m\n");
+  printf(
+    "Total elapsed: "
+    "%d seconds, "
+    "%li seeks/s, "
+    "%.2f ms access time\n",
+    interval,
+    count / interval,
+    1000.0 * interval / count
+  );
   exit(EXIT_SUCCESS);
 }
 
 
 /**
- * Normal seek
+ * Common to all block functions
  */
-void normal_seek(char *device) {
-  printf("Check %s (%lu blocks, %luMB) in NORMAL mode. Please wait...\n",
-    device, blocks, blocks / 2048);
-  while (count <= blocks) {
+void read_block(void) {
+  retval = lseek64(fd, BLOCKSIZE * offset, SEEK_SET);
+  handle("lseek64", retval == (off64_t) -1);
+  retval = read(fd, buffer, BLOCKSIZE);
+  handle("read", retval < 0);
+}
+
+
+/**
+ * Normal operation
+ */
+void normal_s(char *device) {
+  printf(
+    "Running in NORMAL mode "
+    "(%s, %lu blocks, %lu bytes)...\n",
+    device,
+    blocks,
+    blocks * BLOCKSIZE
+  );
+  for (count = 0; count < blocks; count++) {
     offset = (off64_t) count;
-    printf("Checking block %lu\r", offset);
-    retval = lseek64(fd, BLOCKSIZE *offset, SEEK_SET);
-    handle("lseek64", retval == (off64_t) -1);
-    retval = read(fd, buffer, BLOCKSIZE);
-    handle("read", retval < 0);
+    printf(
+      "   > Block ID: %lu"
+      "                                \r",
+      offset
+    );
+    read_block();
+  }
+  finish();
+}
+
+
+/**
+ * Reverse operation
+ */
+void reverse_s(char *device) {
+  unsigned long cdown;
+  count = 0;
+  printf(
+    "Running in REVERSE mode "
+    "(%s, %lu blocks, %lu bytes)...\n",
+    device,
+    blocks,
+    blocks * BLOCKSIZE
+  );
+  for (cdown = blocks; cdown > 0; cdown--) {
+    offset = (off64_t) cdown - 1;
+    printf(
+      "   > Block ID: %lu"
+      "                                \r",
+      offset
+    );
+    read_block();
     count++;
   }
   finish();
@@ -94,52 +147,40 @@ void normal_seek(char *device) {
 
 
 /**
- * Reverse seek
+ * Shuffle operation
  */
-void reverse_seek(char *device) {
-  unsigned long cdown = blocks;
-  printf("Check %s (%lu blocks, %luMB) in REVERSE mode. Please wait...\n",
-    device, blocks, blocks / 2048);
-  while (cdown > 0) {
-    offset = (off64_t) cdown;
-    printf("Checking block %lu \r", offset);
-    retval = lseek64(fd, BLOCKSIZE *offset, SEEK_SET);
-    handle("lseek64", retval == (off64_t) -1);
-    retval = read(fd, buffer, BLOCKSIZE);
-    handle("read", retval < 0);
-    cdown--;
-    count++;
-  }
-  finish();
-}
-
-
-/**
- * Shuffle seek
- */
-void shuffle_seek(char *device) {
+void shuffle_s(char *device) {
   srand(start);
-  printf("Check %s (%lu blocks, %luMB) in SHUFFLE mode. Please wait...\n",
-    device, blocks, blocks / 2048);
-  while (count <= blocks) {
+  printf(
+    "Running in SHUFFLE mode "
+    "(%s, %lu blocks, %lu bytes)...\n",
+    device,
+    blocks,
+    blocks * BLOCKSIZE
+  );
+  for (count = 0; count < blocks; count++) {
     offset = (off64_t) rand() % blocks;
-    printf("Checking block %lu                                    \r", offset);
-    retval = lseek64(fd, BLOCKSIZE *offset, SEEK_SET);
-    handle("lseek64", retval == (off64_t) -1);
-    retval = read(fd, buffer, BLOCKSIZE);
-    handle("read", retval < 0);
-    count++;
+    printf(
+      "   > Block ID: %lu"
+      "                                \r",
+      offset
+    );
+    read_block();
   }
   finish();
 }
 
 
 /**
- * Program start
+ * main()
  */
 int main(int argc, char **argv) {
-  printf("\x1b[1;37mSeekTest v.1.3 - (c) 2020 Flavio Augusto (@facmachado)\x1b[0m\n");
-  if (argc < 3) help();
+  printf(
+    "\x1b[1;37m(c) 2020 "
+    "Flavio Augusto (@facmachado) [MIT License]\n"
+    "https://github.com/facmachado/tools\x1b[0m\n"
+  );
+  if (argc < 3) help(argv[0]);
 
   setvbuf(stdout, NULL, _IONBF, 0);
 
@@ -154,15 +195,15 @@ int main(int argc, char **argv) {
 
   switch (argv[1][1]) {
     case 'n':
-      normal_seek(argv[2]);
+      normal_s(argv[2]);
       break;
     case 'r':
-      reverse_seek(argv[2]);
+      reverse_s(argv[2]);
       break;
     case 's':
-      shuffle_seek(argv[2]);
+      shuffle_s(argv[2]);
       break;
     default:
-      help();
+      help(argv[0]);
   }
 }

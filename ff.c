@@ -1,7 +1,5 @@
 /**
- * ff.c
- * 0xff - Device/Partition data destruction ("zerofill" with 0xff)
- *        Version 1.0
+ * ff.c - Device/Partition data destruction ("zerofill" with 0xff)
  *
  * Copyright (c) 2020 Flavio Augusto (@facmachado)
  *
@@ -40,6 +38,20 @@ off64_t offset;
 
 
 /**
+ * Help
+ */
+void help(const char *arg0) {
+  printf(
+    "\x1b[1;33mUsage: "
+    "%s <-n|-r|-s> "
+    "<device|partition>\x1b[0m\n",
+    arg0
+  );
+  exit(EXIT_SUCCESS);
+}
+
+
+/**
  * Error handling
  */
 void handle(const char *string, int error) {
@@ -54,42 +66,81 @@ void handle(const char *string, int error) {
  * Program finish
  */
 void finish() {
+  printf("\n\x1b[1;31mStopping, please wait... ");
   retval = close(fd);
   handle("close", retval < 0);
   time(&end);
   int interval = (int) (end - start);
-  if (count < blocks)
-    printf("\n\x1b[1;31mWrite stopped!\x1b[0m But data may be already lost\n");
-  else
-    printf("\n\x1b[1;32mWrite finished!\x1b[0m\n");
-  printf("Total elapsed: %d seconds, %li seeks/s, %.2f ms access time\n",
-    interval, count / interval, 1000.0 * interval / count);
+  printf(
+    "\x1b[1;32mDone!\x1b[0m\n"
+    "Total elapsed: "
+    "%d seconds, "
+    "%li seeks/s, "
+    "%.2f ms access time\n",
+    interval,
+    count / interval,
+    1000.0 * interval / count
+  );
   exit(EXIT_SUCCESS);
 }
 
 
 /**
- * Help
+ * Common to all block functions
  */
-void help() {
-  printf("\x1b[1;33mUsage: ff <-n|-r|-s> <device|partition>\x1b[0m\n");
-  exit(EXIT_SUCCESS);
+void write_block(void) {
+  retval = lseek64(fd, BLOCKSIZE * offset, SEEK_SET);
+  handle("lseek64", retval == (off64_t) -1);
+  retval = write(fd, memset(buffer, ff, BLOCKSIZE), BLOCKSIZE);
+  handle("write", retval < 0);
 }
 
 
 /**
- * Normal write
+ * Normal operation
  */
-void normal_write(char *device) {
-  printf("Write %s (%lu blocks, %luMB) in NORMAL mode. Please wait...\n",
-    device, blocks, blocks / 2048);
-  while (count <= blocks) {
+void normal_w(char *device) {
+  printf(
+    "Running in NORMAL mode "
+    "(%s, %lu blocks, %lu bytes)...\n",
+    device,
+    blocks,
+    blocks * BLOCKSIZE
+  );
+  for (count = 0; count < blocks; count++) {
     offset = (off64_t) count;
-    printf("Writing block %lu\r", offset);
-    retval = lseek64(fd, BLOCKSIZE * offset, SEEK_SET);
-    handle("lseek64", retval == (off64_t) -1);
-    retval = write(fd, memset(buffer, ff, BLOCKSIZE), BLOCKSIZE);
-    handle("write", retval < 0);
+    printf(
+      "   > Block ID: %lu"
+      "                                \r",
+      offset
+    );
+    write_block();
+  }
+  finish();
+}
+
+
+/**
+ * Reverse operation
+ */
+void reverse_w(char *device) {
+  unsigned long cdown;
+  count = 0;
+  printf(
+    "Running in REVERSE mode "
+    "(%s, %lu blocks, %lu bytes)...\n",
+    device,
+    blocks,
+    blocks * BLOCKSIZE
+  );
+  for (cdown = blocks; cdown > 0; cdown--) {
+    offset = (off64_t) cdown - 1;
+    printf(
+      "   > Block ID: %lu"
+      "                                \r",
+      offset
+    );
+    write_block();
     count++;
   }
   finish();
@@ -97,56 +148,44 @@ void normal_write(char *device) {
 
 
 /**
- * Reverse write
+ * Shuffle operation
  */
-void reverse_write(char *device) {
-  unsigned long cdown = blocks;
-  printf("Write %s (%lu blocks, %luMB) in REVERSE mode. Please wait...\n",
-    device, blocks, blocks / 2048);
-  while (cdown > 0) {
-    offset = (off64_t) cdown;
-    printf("Writing block %lu \r", offset);
-    retval = lseek64(fd, BLOCKSIZE * offset, SEEK_SET);
-    handle("lseek64", retval == (off64_t) -1);
-    retval = write(fd, memset(buffer, ff, BLOCKSIZE), BLOCKSIZE);
-    handle("write", retval < 0);
-    cdown--;
-    count++;
-  }
-  finish();
-}
-
-
-/**
- * Shuffle write
- */
-void shuffle_write(char *device) {
+void shuffle_w(char *device) {
   srand(start);
-  printf("Write %s (%lu blocks, %luMB) in SHUFFLE mode. Please wait...\n",
-    device, blocks, blocks / 2048);
-  while (count <= blocks) {
+  printf(
+    "Running in SHUFFLE mode "
+    "(%s, %lu blocks, %lu bytes)...\n",
+    device,
+    blocks,
+    blocks * BLOCKSIZE
+  );
+  for (count = 0; count < blocks; count++) {
     offset = (off64_t) rand() % blocks;
-    printf("Writing block %lu                                     \r", offset);
-    retval = lseek64(fd, BLOCKSIZE * offset, SEEK_SET);
-    handle("lseek64", retval == (off64_t) -1);
-    retval = write(fd, memset(buffer, ff, BLOCKSIZE), BLOCKSIZE);
-    handle("write", retval < 0);
-    count++;
+    printf(
+      "   > Block ID: %lu"
+      "                                \r",
+      offset
+    );
+    write_block();
   }
   finish();
 }
 
 
 /**
- * Program start
+ * main()
  */
 int main(int argc, char **argv) {
-  printf("\x1b[1;37m0xff v.1.0 - (c) 2020 Flavio Augusto (@facmachado)\x1b[0m\n");
-  if (argc < 3) help();
+  printf(
+    "\x1b[1;37m(c) 2020 "
+    "Flavio Augusto (@facmachado) [MIT License]\n"
+    "https://github.com/facmachado/tools\x1b[0m\n"
+  );
+  if (argc < 3) help(argv[0]);
 
   setvbuf(stdout, NULL, _IONBF, 0);
 
-  fd = open(argv[2], O_RDWR);
+  fd = open(argv[2], O_WRONLY);
   handle("open", fd < 0);
 
   retval = ioctl(fd, BLKGETSIZE, &blocks);
@@ -157,15 +196,15 @@ int main(int argc, char **argv) {
 
   switch (argv[1][1]) {
     case 'n':
-      normal_write(argv[2]);
+      normal_w(argv[2]);
       break;
     case 'r':
-      reverse_write(argv[2]);
+      reverse_w(argv[2]);
       break;
     case 's':
-      shuffle_write(argv[2]);
+      shuffle_w(argv[2]);
       break;
     default:
-      help();
+      help(argv[0]);
   }
 }
