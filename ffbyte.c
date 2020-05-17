@@ -27,10 +27,10 @@
 #include <sys/types.h>
 #include <linux/fs.h>
 
-#define BLOCKSIZE 512
+#define BLOCKSIZE 1
 
 int fd, retval;
-char buffer;
+char buffer[BLOCKSIZE];
 unsigned char ff = 0xff;
 unsigned long count, blocks, bytes;
 time_t start, end;
@@ -89,9 +89,9 @@ void finish(void) {
  * Common to all block functions
  */
 void write_byte(void) {
-  retval = lseek64(fd, offset, SEEK_SET);
+  retval = lseek64(fd, BLOCKSIZE * offset, SEEK_SET);
   handle("lseek64", retval == (off64_t) -1);
-  retval = write(fd, memset(buffer, ff, 1), 1);
+  retval = write(fd, memset(buffer, ff, BLOCKSIZE), BLOCKSIZE);
   handle("write", retval < 0);
 }
 
@@ -188,7 +188,7 @@ int main(int argc, char **argv) {
   retval = ioctl(fd, BLKGETSIZE, &blocks);
   handle("ioctl", retval == -1);
 
-  bytes = blocks * BLOCKSIZE;
+  bytes = blocks * 512;
 
   time(&start);
   signal(SIGINT, &finish);
