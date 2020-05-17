@@ -1,15 +1,14 @@
 /**
- * seektest.c - Device/Partition seek test (mini benchmark)
+ * ffbyte.c - Same as ffblock.c, but byte-by-byte
  *
  * Copyright (c) 2020 Flavio Augusto (@facmachado)
  *
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  *
- * Based on the original "Seeker"
- * (http://www.linuxinsight.com/how_fast_is_your_disk.html)
+ * Based on SeekTest (check seektest.c)
  *
- * Usage: seektest <-n|-r|-s> <device|partition>
+ * Usage: ffbyte <-n|-r|-s> <device|partition>
  */
 
 
@@ -18,6 +17,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 #include <unistd.h>
 #include <errno.h>
 #include <time.h>
@@ -30,8 +30,9 @@
 #define BLOCKSIZE 512
 
 int fd, retval;
-char buffer[BLOCKSIZE];
-unsigned long count, blocks;
+char buffer;
+unsigned char ff = 0xff;
+unsigned long count, blocks, bytes;
 time_t start, end;
 off64_t offset;
 
@@ -65,13 +66,13 @@ void handle(const char *string, int error) {
  * Program finish
  */
 void finish(void) {
+  printf("\n\x1b[1;31mStopping, please wait... ");
+  retval = close(fd);
+  handle("close", retval < 0);
   time(&end);
   int interval = (int) (end - start);
-  if (count < blocks)
-    printf("\n\x1b[1;31mStopped!\x1b[0m\n");
-  else
-    printf("\n\x1b[1;32mDone!\x1b[0m\n");
   printf(
+    "\x1b[1;32mDone!\x1b[0m\n"
     "Total elapsed: "
     "%d seconds, "
     "%li seeks/s, "
@@ -87,33 +88,32 @@ void finish(void) {
 /**
  * Common to all block functions
  */
-void read_block(void) {
-  retval = lseek64(fd, BLOCKSIZE * offset, SEEK_SET);
+void write_byte(void) {
+  retval = lseek64(fd, offset, SEEK_SET);
   handle("lseek64", retval == (off64_t) -1);
-  retval = read(fd, buffer, BLOCKSIZE);
-  handle("read", retval < 0);
+  retval = write(fd, memset(buffer, ff, 1), 1);
+  handle("write", retval < 0);
 }
 
 
 /**
  * Normal operation
  */
-void normal_s(char *device) {
+void normal_w(char *device) {
   printf(
     "Running in NORMAL mode "
-    "(%s, %lu blocks, %lu bytes)...\n",
+    "(%s, %lu bytes)...\n",
     device,
-    blocks,
-    blocks * BLOCKSIZE
+    bytes
   );
-  for (count = 0; count < blocks; count++) {
+  for (count = 0; count < bytes; count++) {
     offset = (off64_t) count;
     printf(
-      "   > Block ID: %lu"
+      "   > Byte ID: %lu"
       "                                \r",
       offset
     );
-    read_block();
+    write_byte();
   }
   finish();
 }
@@ -122,24 +122,23 @@ void normal_s(char *device) {
 /**
  * Reverse operation
  */
-void reverse_s(char *device) {
+void reverse_w(char *device) {
   unsigned long cdown;
   count = 0;
   printf(
     "Running in REVERSE mode "
-    "(%s, %lu blocks, %lu bytes)...\n",
+    "(%s, %lu bytes)...\n",
     device,
-    blocks,
-    blocks * BLOCKSIZE
+    bytes
   );
-  for (cdown = blocks; cdown > 0; cdown--) {
+  for (cdown = bytes; cdown > 0; cdown--) {
     offset = (off64_t) cdown - 1;
     printf(
-      "   > Block ID: %lu"
+      "   > Byte ID: %lu"
       "                                \r",
       offset
     );
-    read_block();
+    write_byte();
     count++;
   }
   finish();
@@ -149,23 +148,22 @@ void reverse_s(char *device) {
 /**
  * Shuffle operation
  */
-void shuffle_s(char *device) {
+void shuffle_w(char *device) {
   srand(start);
   printf(
     "Running in SHUFFLE mode "
-    "(%s, %lu blocks, %lu bytes)...\n",
+    "(%s, %lu bytes)...\n",
     device,
-    blocks,
-    blocks * BLOCKSIZE
+    bytes
   );
-  for (count = 0; count < blocks; count++) {
-    offset = (off64_t) rand() % blocks;
+  for (count = 0; count < bytes; count++) {
+    offset = (off64_t) rand() % bytes;
     printf(
-      "   > Block ID: %lu"
+      "   > Byte ID: %lu"
       "                                \r",
       offset
     );
-    read_block();
+    write_byte();
   }
   finish();
 }
@@ -184,24 +182,26 @@ int main(int argc, char **argv) {
 
   setvbuf(stdout, NULL, _IONBF, 0);
 
-  fd = open(argv[2], O_RDONLY);
+  fd = open(argv[2], O_WRONLY);
   handle("open", fd < 0);
 
   retval = ioctl(fd, BLKGETSIZE, &blocks);
   handle("ioctl", retval == -1);
+
+  bytes = blocks * BLOCKSIZE;
 
   time(&start);
   signal(SIGINT, &finish);
 
   switch (argv[1][1]) {
     case 'n':
-      normal_s(argv[2]);
+      normal_w(argv[2]);
       break;
     case 'r':
-      reverse_s(argv[2]);
+      reverse_w(argv[2]);
       break;
     case 's':
-      shuffle_s(argv[2]);
+      shuffle_w(argv[2]);
       break;
     default:
       help(argv[0]);

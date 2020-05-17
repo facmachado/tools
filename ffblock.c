@@ -1,5 +1,5 @@
 /**
- * ff.c - Device/Partition data destruction ("zerofill" with 0xff)
+ * ffblock.c - Device/Partition data destruction ("zerofill" with 0xff)
  *
  * Copyright (c) 2020 Flavio Augusto (@facmachado)
  *
@@ -8,7 +8,7 @@
  *
  * Based on SeekTest (check seektest.c)
  *
- * Usage: ff <-n|-r|-s> <device|partition>
+ * Usage: ffblock <-n|-r|-s> <device|partition>
  */
 
 
@@ -65,7 +65,7 @@ void handle(const char *string, int error) {
 /**
  * Program finish
  */
-void finish() {
+void finish(void) {
   printf("\n\x1b[1;31mStopping, please wait... ");
   retval = close(fd);
   handle("close", retval < 0);
