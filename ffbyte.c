@@ -6,7 +6,7 @@
  * This software may be modified and distributed under the terms
  * of the MIT license. See the LICENSE file for details.
  *
- * Based on SeekTest (check seektest.c)
+ * Based on seektest.c
  *
  * Usage: ffbyte <-n|-r|-s> <device|partition>
  */
@@ -63,6 +63,40 @@ void handle(const char *string, int error) {
 
 
 /**
+ * Warning (users everywhere)
+ */
+void disclaimer(void) {
+  char ans[4];
+  printf(
+    "\n"
+    "############################################################\n"
+    "#                                                          #\n"
+    "#                     W A R N I N G !                      #\n"
+    "#              PLEASE READ THIS BEFORE START               #\n"
+    "#                                                          #\n"
+    "#  It is important for you to know:                        #\n"
+    "#                                                          #\n"
+    "#  1. This app WILL DESTROY your data,                     #\n"
+    "#     and YOU, AND ONLY YOU, are responsible for it.       #\n"
+    "#                                                          #\n"
+    "#  2. This operation can take MUCH TIME (hours or days),   #\n"
+    "#     even on NORMAL mode (depends on the target).         #\n"
+    "#                                                          #\n"
+    "#  If you do not agree with the disclaimer above,          #\n"
+    "#  just stop this app by pressing ENTER.                   #\n"
+    "#                                                          #\n"
+    "############################################################\n"
+    "\nDo you want to continue (yes/NO)? "
+  );
+  fgets(ans, 4, stdin);
+  if (strcmp(ans, "yes")) {
+    printf("Cancelled\n");
+    exit(EXIT_SUCCESS);
+  }
+}
+
+
+/**
  * Program finish
  */
 void finish(void) {
@@ -89,7 +123,7 @@ void finish(void) {
  * Common to all block functions
  */
 void write_byte(void) {
-  retval = lseek64(fd, BLOCKSIZE * offset, SEEK_SET);
+  retval = lseek64(fd, offset, SEEK_SET);
   handle("lseek64", retval == (off64_t) -1);
   retval = write(fd, memset(buffer, ff, BLOCKSIZE), BLOCKSIZE);
   handle("write", retval < 0);
@@ -108,11 +142,7 @@ void normal_w(char *device) {
   );
   for (count = 0; count < bytes; count++) {
     offset = (off64_t) count;
-    printf(
-      "   > Byte ID: %lu"
-      "                                \r",
-      offset
-    );
+    printf("   > Byte ID: %lu\r", offset);
     write_byte();
   }
   finish();
@@ -133,11 +163,7 @@ void reverse_w(char *device) {
   );
   for (cdown = bytes; cdown > 0; cdown--) {
     offset = (off64_t) cdown - 1;
-    printf(
-      "   > Byte ID: %lu"
-      "                                \r",
-      offset
-    );
+    printf("   > Byte ID: %lu \r", offset);
     write_byte();
     count++;
   }
@@ -174,11 +200,13 @@ void shuffle_w(char *device) {
  */
 int main(int argc, char **argv) {
   printf(
-    "\x1b[1;37m(c) 2020 "
+    "\x1b[1;37m%s - (c) 2020 "
     "Flavio Augusto (@facmachado) [MIT License]\n"
-    "https://github.com/facmachado/tools\x1b[0m\n"
+    "https://github.com/facmachado/tools\x1b[0m\n",
+    argv[0]
   );
   if (argc < 3) help(argv[0]);
+  disclaimer();
 
   setvbuf(stdout, NULL, _IONBF, 0);
 
