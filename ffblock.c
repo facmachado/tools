@@ -202,6 +202,11 @@ void shuffle_w(char *device) {
  * main()
  */
 int main(int argc, char **argv) {
+  if (getuid() != 0) {
+    printf("\x1b[1;31mSorry, you are not root\x1b[0m\n");
+    exit(EXIT_FAILURE);
+  }
+
   printf(
     "\x1b[1;37m%s - (c) 2020 "
     "Flavio Augusto (@facmachado) [MIT License]\n"
