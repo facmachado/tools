@@ -8,8 +8,12 @@
 #
 
 
+#
+# Initial consts & vars
+#
+
 .RECIPEPREFIX=.
-.DEFAULT_GOAL=exe64
+.DEFAULT_GOAL=$(shell uname -m)
 
 CC=gcc
 STRIP=strip
@@ -19,6 +23,12 @@ SRC=$(wildcard *.c)
 B64=$(patsubst %.c,%,$(SRC))
 B32=$(patsubst %.c,%32,$(SRC))
 
+PREFIX=/usr/local
+
+
+#
+# Pattern workarounds for batch compiling
+#
 
 %: %.c
 . $(CC) $< $(CCFLAGS) -o $@ && $(STRIP) -s $@
@@ -27,19 +37,39 @@ B32=$(patsubst %.c,%32,$(SRC))
 . $(CC) $< $(CCFLAGS) -m32 -o $@ && $(STRIP) -s $@
 
 
-exe64: $(B64)
+#
+# Arch directives
+#
 
-exe32: $(B32)
+i386: $(B32)
 
+i486: i386
+
+i586: i386
+
+i686: i386
+
+x86_64: $(B64)
+
+
+#
+# Setup.exe routines
+#
 
 install:
-.
+ifeq ($(.DEFAULT_GOAL), x86_64)
+. (for i in $(B64); do cp $$i $(PREFIX)/bin; chmod 700 $(PREFIX)/bin/$$i; done)
+else ifeq ($(.DEFAULT_GOAL), i?86)
+. (for i in $(B32); do cp $$i $(PREFIX)/bin; chmod 700 $(PREFIX)/bin/$$i; done)
+endif
 
 uninstall:
-.
+. (cd $(PREFIX)/bin && rm -f $(B64) $(B32))
 
 
-.PHONY clean
+#
+# Clean project routine
+#
 
 clean:
 . rm -f $(B64) $(B32)
