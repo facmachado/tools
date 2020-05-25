@@ -1,4 +1,4 @@
-// WIP: Use "gcc -ltinfo -lncurses -o nchexorg nchexorg.c && strip -s nchexorg"
+// WIP: Use "gcc -lncurses -ltinfo -o nchexorg nchexorg.c && strip -s nchexorg"
 
 #include <stdio.h>
 #include <stdlib.h>
@@ -9,18 +9,17 @@
 #include <ncurses.h>
 
 
-// #ifndef CTRL
-// #define CTRL(c) ((c) & 0x1f)
-// #endif
+int key;
 
 
 void beginSession(void);
 void initColors(void);
 void bottomAbout(void);
 void bottomEdit(void);
-void bottomError(char *msg);
 void bottomFind(void);
 void bottomQuit(void);
+void bottomMsg(char *msg, char type);
+void bottomSaved(void);
 void resizeHandler(void);
 void mainWindow(void);
 void mainBottom(void);
@@ -29,7 +28,6 @@ void endSession(void);
 
 
 int main(int argc, char **argv) {
-  char *key;
   beginSession();
 
   mainWindow();
@@ -37,22 +35,22 @@ int main(int argc, char **argv) {
   mainBottom();
 
   while (key = getch()) {
-    if (key == 'q')
-      break;
-    else if (key == 'a')
-      bottomAbout();
-    else if (key == 'b')
-      bottomError("Voce apertou o botao errado");
-    else if (key == 'e')
-      bottomEdit();
+    if (key == KEY_RESIZE)
+      resizeHandler();
+    // else if (key == 'o')
+    //   mainBottom();
     else if (key == 'f')
       bottomFind();
-    else if (key == 'n')
-      mainBottom();
+    else if (key == 'e')
+      bottomEdit();
     else if (key == 's')
+      bottomMsg("File saved successfully", 'i');
+    else if (key == 'a')
+      bottomAbout();
+    else if (key == 'q')
       bottomQuit();
-    else if (key == KEY_RESIZE)
-      resizeHandler();
+    // else if (key == 'b')
+    //   bottomMsg("Voce apertou o botao errado", 'e');
   }
 
   endSession();
@@ -114,120 +112,83 @@ void initColors(void) {
 
 
 void bottomAbout(void) {
-  move(LINES - 1, 0);
-  attron(COLOR_PAIR(10));
-  whline(stdscr, ' ', COLS);
-  move(LINES - 1, 0);
-  printw("HexOrg - (c) @facmachado https://github.com/facmachado/tools [MIT] ");
-  attroff(COLOR_PAIR(10));
-  attron(A_BOLD);
-  printw("ENTER");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(10));
-  printw(" OK");
-  attroff(COLOR_PAIR(10));
+  bottomMsg(
+    "HexOrg - (c) @facmachado [MIT] "
+    "https://github.com/facmachado/tools", 'i'
+  );
 }
 
 
 void bottomEdit(void) {
-  move(LINES - 1, 0);
-  attron(COLOR_PAIR(3));
-  whline(stdscr, ' ', COLS);
-  move(LINES - 1, 0);
-  printw("O/A: 00000070/00000070 Old code: 72 New code: ");
-  attron(COLOR_PAIR(8));
-  printw("__");
-  attron(COLOR_PAIR(3));
-  printw(" ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("ESC");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" Cancel ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("ENTER");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" Confirm");
-  attroff(COLOR_PAIR(3));
-}
-
-
-void bottomError(char *msg) {
-  move(LINES - 1, 0);
-  attron(COLOR_PAIR(9));
-  whline(stdscr, ' ', COLS);
-  move(LINES - 1, 0);
-  printw("%s ", msg);
-  attroff(COLOR_PAIR(9));
-  attron(A_BOLD);
-  printw("ENTER");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(9));
-  printw(" OK");
-  attroff(COLOR_PAIR(9));
+  attrset(COLOR_PAIR(3));
+  mvhline(LINES - 1, 0, ' ', COLS);
+  mvprintw(
+    LINES - 1, 0,
+    "O/A: 00000070/00000070 "
+    "Old code: 72 New code: __ "
+    "ESC Cancel ENTER Confirm"
+  );
+  mvchgat(LINES - 1, 49, 3, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 60, 5, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 14, 8, A_BOLD, COLOR_PAIR(4), NULL);
+  mvchgat(LINES - 1, 5, 8, A_BOLD, COLOR_PAIR(6), NULL);
+  refresh();
 }
 
 
 void bottomFind(void) {
-  move(LINES - 1, 0);
-  attron(COLOR_PAIR(3));
-  whline(stdscr, ' ', COLS);
-  move(LINES - 1, 0);
-  printw("Find: ");
-  attron(COLOR_PAIR(8));
-  printw("________");
-  attron(COLOR_PAIR(3));
-  printw(" ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("O");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" ORG parameter ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("A");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" Offset ADDRESS ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("ESC");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" Cancel ");
-  attroff(COLOR_PAIR(3));
+  attrset(COLOR_PAIR(3));
+  mvhline(LINES - 1, 0, ' ', COLS);
+  mvprintw(
+    LINES - 1, 0,
+    "Find: ________ O ORG parameter "
+    "A Offset ADDRESS ESC Cancel"
+  );
+  mvchgat(LINES - 1, 15, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 31, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 48, 3, A_BOLD, COLOR_PAIR(1), NULL);
+}
+
+
+void bottomMsg(char *msg, char type) {
+  if (type == 'e')
+    attrset(COLOR_PAIR(9));
+  else if (type == 'i')
+    attrset(COLOR_PAIR(10));
+  mvhline(LINES - 1, 0, ' ', COLS);
+  mvprintw(LINES - 1, 0, "%s ENTER OK", msg);
+  mvchgat(LINES - 1, strlen(msg) + 1, 5, A_BOLD, COLOR_PAIR(1), NULL);
+  while (key = getch()) {
+    if (key == 0xa) {
+      mainBottom();
+      break;
+    }
+  }
 }
 
 
 void bottomQuit(void) {
-  move(LINES - 1, 0);
-  attron(COLOR_PAIR(9));
-  whline(stdscr, ' ', COLS);
-  move(LINES - 1, 0);
-  printw("Quit without saving? ");
-  attroff(COLOR_PAIR(9));
-  attron(A_BOLD);
-  printw("Y");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(9));
-  printw(" Yes ");
-  attroff(COLOR_PAIR(9));
-  attron(A_BOLD);
-  printw("N");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(9));
-  printw(" No, cancel ");
-  attroff(COLOR_PAIR(9));
-  attron(A_BOLD);
-  printw("S");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(9));
-  printw(" Save and quit");
-  attroff(COLOR_PAIR(9));
+  attrset(COLOR_PAIR(9));
+  mvhline(LINES - 1, 0, ' ', COLS);
+  mvprintw(
+    LINES - 1, 0,
+    "Save before quit? "
+    "Y Yes N No ESC Cancel"
+  );
+  mvchgat(LINES - 1, 18, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 24, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 29, 3, A_BOLD, COLOR_PAIR(1), NULL);
+  while (key = getch()) {
+    if (key == 'y') {
+      bottomMsg("File saved successfully", 'i');
+      endSession();
+    } else if (key == 'n')
+      endSession();
+    else if (key == 0x1b) {
+      mainBottom();
+      break;
+    }
+  }
 }
 
 
@@ -248,54 +209,29 @@ void mainWindow(void) {
 
 
 void mainBottom(void) {
-  move(LINES - 1, 0);
-  attron(COLOR_PAIR(3));
-  whline(stdscr, ' ', COLS);
-  move(LINES - 1, 0);
-  printw("O/A: 00000070/00000070 ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("O");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" Toggle O/A ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("^F");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" Find ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("F2");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" Edit ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("^S");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" Save ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("F1");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" About ");
-  attroff(COLOR_PAIR(3));
-  attron(A_BOLD);
-  printw("^Q");
-  attroff(A_BOLD);
-  attron(COLOR_PAIR(3));
-  printw(" Quit");
-  attroff(COLOR_PAIR(3));
+  attrset(COLOR_PAIR(3));
+  mvhline(LINES - 1, 0, ' ', COLS);
+  mvprintw(
+    LINES - 1, 0,
+    "O/A: 00000070/00000070 "
+    "O Toggle O/A F Find E Edit "
+    "S Save A About Q Quit"
+  );
+  mvchgat(LINES - 1, 23, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 36, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 43, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 50, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 57, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  mvchgat(LINES - 1, 65, 1, A_BOLD, COLOR_PAIR(1), NULL);
+  // refresh();
+  // mvchgat(LINES - 1, 14, 8, A_BOLD, COLOR_PAIR(4), NULL);
+  // mvchgat(LINES - 1, 5, 8, A_BOLD, COLOR_PAIR(6), NULL);
+  // refresh();
 }
 
 
 void mainTop(void) {
-  move(0, 3);
-  printw(" HexOrg - arquivo.ext ");
+  mvprintw(0, 3, " HexOrg - arquivo.ext ");
 }
 
 
