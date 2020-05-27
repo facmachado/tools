@@ -13,18 +13,17 @@ int key;
 
 
 void beginSession(void);
+void endSession(void);
 void initColors(void);
 void bottomAbout(void);
 void bottomEdit(void);
 void bottomFind(void);
-void bottomQuit(void);
 void bottomMsg(char *msg, char type);
-void bottomSaved(void);
-void resizeHandler(void);
-void mainWindow(void);
+void bottomQuit(void);
 void mainBottom(void);
 void mainTop(void);
-void endSession(void);
+void mainWindow(void);
+void resizeHandler(void);
 
 
 int main(int argc, char **argv) {
@@ -34,26 +33,25 @@ int main(int argc, char **argv) {
   mainTop();
   mainBottom();
 
-  while (key = getch()) {
+  while (1) {
+    key = getch();
     if (key == KEY_RESIZE)
       resizeHandler();
-    // else if (key == 'o')
-    //   mainBottom();
+    else if (key == 'o')
+      mainBottom();
     else if (key == 'f')
       bottomFind();
     else if (key == 'e')
       bottomEdit();
     else if (key == 's')
-      bottomMsg("File saved successfully", 'i');
+      bottomMsg("File saved successfully", NULL);
     else if (key == 'a')
       bottomAbout();
     else if (key == 'q')
       bottomQuit();
-    // else if (key == 'b')
-    //   bottomMsg("Voce apertou o botao errado", 'e');
+    else if (key == 'b')
+      bottomMsg("Voce apertou o botao errado", 'e');
   }
-
-  endSession();
 }
 
 
@@ -114,13 +112,13 @@ void initColors(void) {
 void bottomAbout(void) {
   bottomMsg(
     "HexOrg - (c) @facmachado [MIT] "
-    "https://github.com/facmachado/tools", 'i'
+    "https://github.com/facmachado/tools", NULL
   );
 }
 
 
 void bottomEdit(void) {
-  attrset(COLOR_PAIR(3));
+  attron(COLOR_PAIR(3));
   mvhline(LINES - 1, 0, ' ', COLS);
   mvprintw(
     LINES - 1, 0,
@@ -128,37 +126,55 @@ void bottomEdit(void) {
     "Old code: 72 New code: __ "
     "ESC Cancel ENTER Confirm"
   );
+  attroff(COLOR_PAIR(3));
+  mvchgat(LINES - 1, 5, 8,  A_REVERSE, COLOR_PAIR(6), NULL);
+  mvchgat(LINES - 1, 14, 8, A_REVERSE, COLOR_PAIR(4), NULL);
   mvchgat(LINES - 1, 49, 3, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 60, 5, A_BOLD, COLOR_PAIR(1), NULL);
-  mvchgat(LINES - 1, 14, 8, A_BOLD, COLOR_PAIR(4), NULL);
-  mvchgat(LINES - 1, 5, 8, A_BOLD, COLOR_PAIR(6), NULL);
-  refresh();
+  while (1) {
+    key = getch();
+    if (key == 0x1b) {
+      mainBottom();
+      break;
+    }
+    else if (key == 0xa) {
+      mainBottom();
+      break;
+    }
+  }
 }
 
 
 void bottomFind(void) {
-  attrset(COLOR_PAIR(3));
+  attron(COLOR_PAIR(3));
   mvhline(LINES - 1, 0, ' ', COLS);
   mvprintw(
     LINES - 1, 0,
     "Find: ________ O ORG parameter "
     "A Offset ADDRESS ESC Cancel"
   );
+  attroff(COLOR_PAIR(3));
   mvchgat(LINES - 1, 15, 1, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 31, 1, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 48, 3, A_BOLD, COLOR_PAIR(1), NULL);
+  while (1) {
+    key = getch();
+    if (key == 0x1b) {
+      mainBottom();
+      break;
+    }
+  }
 }
 
 
 void bottomMsg(char *msg, char type) {
-  if (type == 'e')
-    attrset(COLOR_PAIR(9));
-  else if (type == 'i')
-    attrset(COLOR_PAIR(10));
+  attron(COLOR_PAIR(type == 'e' ? 9 : 10));
   mvhline(LINES - 1, 0, ' ', COLS);
   mvprintw(LINES - 1, 0, "%s ENTER OK", msg);
+  attroff(COLOR_PAIR(type == 'e' ? 9 : 10));
   mvchgat(LINES - 1, strlen(msg) + 1, 5, A_BOLD, COLOR_PAIR(1), NULL);
-  while (key = getch()) {
+  while (1) {
+    key = getch();
     if (key == 0xa) {
       mainBottom();
       break;
@@ -168,26 +184,27 @@ void bottomMsg(char *msg, char type) {
 
 
 void bottomQuit(void) {
-  attrset(COLOR_PAIR(9));
+  attron(COLOR_PAIR(9));
   mvhline(LINES - 1, 0, ' ', COLS);
   mvprintw(
     LINES - 1, 0,
     "Save before quit? "
     "Y Yes N No ESC Cancel"
   );
+  attroff(COLOR_PAIR(9));
   mvchgat(LINES - 1, 18, 1, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 24, 1, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 29, 3, A_BOLD, COLOR_PAIR(1), NULL);
-  while (key = getch()) {
-    if (key == 'y') {
-      bottomMsg("File saved successfully", 'i');
+  while (1) {
+    key = getch();
+    if (key == 0x1b) {
+      mainBottom();
+      break;
+    } else if (key == 'y') {
+      bottomMsg("File saved successfully", NULL);
       endSession();
     } else if (key == 'n')
       endSession();
-    else if (key == 0x1b) {
-      mainBottom();
-      break;
-    }
   }
 }
 
@@ -209,7 +226,7 @@ void mainWindow(void) {
 
 
 void mainBottom(void) {
-  attrset(COLOR_PAIR(3));
+  attron(COLOR_PAIR(3));
   mvhline(LINES - 1, 0, ' ', COLS);
   mvprintw(
     LINES - 1, 0,
@@ -217,16 +234,15 @@ void mainBottom(void) {
     "O Toggle O/A F Find E Edit "
     "S Save A About Q Quit"
   );
+  attroff(COLOR_PAIR(3));
+  mvchgat(LINES - 1, 5,  8, A_REVERSE, COLOR_PAIR(6), NULL);
+  mvchgat(LINES - 1, 14, 8, A_REVERSE, COLOR_PAIR(4), NULL);
   mvchgat(LINES - 1, 23, 1, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 36, 1, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 43, 1, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 50, 1, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 57, 1, A_BOLD, COLOR_PAIR(1), NULL);
   mvchgat(LINES - 1, 65, 1, A_BOLD, COLOR_PAIR(1), NULL);
-  // refresh();
-  // mvchgat(LINES - 1, 14, 8, A_BOLD, COLOR_PAIR(4), NULL);
-  // mvchgat(LINES - 1, 5, 8, A_BOLD, COLOR_PAIR(6), NULL);
-  // refresh();
 }
 
 
