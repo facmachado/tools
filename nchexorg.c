@@ -38,7 +38,7 @@ int main(int argc, char **argv) {
     key = getch();
     if (key == KEY_RESIZE)
       resizeHandler();
-    else if (key == 'o')
+    else if (key == 't')
       mainBottom();
     else if (key == 'f')
       bottomFind();
@@ -76,30 +76,18 @@ void initColors(void) {
   init_pair(2, COLOR_BLACK, COLOR_GREEN);
 
   /**
-   * Offset address mode colors
-   * 3: list, 4: cursor
+   * 3: Help color (about)
+   *    Offset address mode colors
+   *    (A_NORMAL: list, A_REVERSE: cursor)
    */
-  init_pair(3, COLOR_YELLOW, COLOR_BLUE);
-  init_pair(4, COLOR_BLUE, COLOR_WHITE);
+  init_pair(3, COLOR_WHITE, COLOR_BLUE);
 
   /**
-   * Origin parameter mode colors
-   * 5: list, 6: cursor
+   * 4: Dialog color (question/error)
+   *    Origin parameter mode colors
+   *    (A_NORMAL: list, A_REVERSE: cursor)
    */
-  init_pair(5, COLOR_YELLOW, COLOR_RED);
-  init_pair(6, COLOR_RED, COLOR_WHITE);
-
-  /**
-   * Dialog color
-   * 7: question/error
-   */
-  init_pair(7, COLOR_WHITE, COLOR_RED);
-
-  /**
-   * Help color
-   * 8: about
-   */
-  init_pair(8, COLOR_WHITE, COLOR_BLUE);
+  init_pair(4, COLOR_WHITE, COLOR_RED);
 }
 
 
@@ -118,10 +106,10 @@ void bottomEdit(void) {
     LINES - 1, 0,
     "O/A: 00000000/00000000 "
     "Old code: 72 New code: __ "
-    "ESC Cancel ENTER Confirm"
+    "ESC=Cancel ENTER=Confirm"
   );
   attroff(COLOR_PAIR(2));
-  mvchgat(LINES - 1, 5, 8,  A_NORMAL, 5, NULL);
+  mvchgat(LINES - 1, 5, 8,  A_NORMAL, 4, NULL);
   mvchgat(LINES - 1, 14, 8, A_NORMAL, 3, NULL);
   mvchgat(LINES - 1, 46, 2, A_REVERSE, 0, NULL);
   mvchgat(LINES - 1, 49, 3, A_BOLD, 0, NULL);
@@ -144,17 +132,23 @@ void bottomFind(void) {
   mvhline(LINES - 1, 0, ' ', COLS);
   mvprintw(
     LINES - 1, 0,
-    "Find: ________ O ORG parameter "
-    "A Offset ADDRESS ESC Cancel"
+    "Find: ________ ENTER=Offset Address "
+    "Shift+ENTER=Origin Parameter ESC=Cancel"
   );
   attroff(COLOR_PAIR(2));
   mvchgat(LINES - 1, 6, 8, A_REVERSE, 0, NULL);
-  mvchgat(LINES - 1, 15, 1, A_BOLD, 0, NULL);
-  mvchgat(LINES - 1, 31, 1, A_BOLD, 0, NULL);
-  mvchgat(LINES - 1, 48, 3, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 15, 5, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 36, 11, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 65, 3, A_BOLD, 0, NULL);
   while (1) {
     key = getch();
-    if (key == 0x1b) {
+    if (key == 0xa) {
+      mainBottom();
+      break;
+    // } else if (key == 0xa) {
+    //   mainBottom();
+    //   break;
+    } else if (key == 0x1b) {
       mainBottom();
       break;
     }
@@ -163,10 +157,10 @@ void bottomFind(void) {
 
 
 void bottomMsg(char *msg, char type) {
-  attron(COLOR_PAIR(type == 'e' ? 7 : 8));
+  attron(COLOR_PAIR(type == 'e' ? 4 : 3));
   mvhline(LINES - 1, 0, ' ', COLS);
-  mvprintw(LINES - 1, 0, "%s ENTER OK", msg);
-  attroff(COLOR_PAIR(type == 'e' ? 7 : 8));
+  mvprintw(LINES - 1, 0, "%s ENTER=OK", msg);
+  attroff(COLOR_PAIR(type == 'e' ? 4 : 3));
   mvchgat(LINES - 1, strlen(msg) + 1, 5, A_BOLD, 0, NULL);
   while (1) {
     key = getch();
@@ -179,17 +173,17 @@ void bottomMsg(char *msg, char type) {
 
 
 void bottomQuit(void) {
-  attron(COLOR_PAIR(7));
+  attron(COLOR_PAIR(4));
   mvhline(LINES - 1, 0, ' ', COLS);
   mvprintw(
     LINES - 1, 0,
     "Save before quit? "
-    "Y Yes N No ESC Cancel"
+    "Yes No ESC=Cancel"
   );
-  attroff(COLOR_PAIR(7));
+  attroff(COLOR_PAIR(4));
   mvchgat(LINES - 1, 18, 1, A_BOLD, 0, NULL);
-  mvchgat(LINES - 1, 24, 1, A_BOLD, 0, NULL);
-  mvchgat(LINES - 1, 29, 3, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 22, 1, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 25, 3, A_BOLD, 0, NULL);
   while (1) {
     key = getch();
     if (key == 0x1b) {
@@ -229,18 +223,18 @@ void mainBottom(void) {
   mvprintw(
     LINES - 1, 0,
     "O/A: 00000000/00000000 "
-    "O Toggle O/A F Find E Edit "
-    "S Save A About Q Quit"
+    "Toggle O/A Find Edit "
+    "Save About Quit"
   );
   attroff(COLOR_PAIR(2));
-  mvchgat(LINES - 1, 5,  8, A_NORMAL, 5, NULL);
+  mvchgat(LINES - 1, 5,  8, A_NORMAL, 4, NULL);
   mvchgat(LINES - 1, 14, 8, A_NORMAL, 3, NULL);
   mvchgat(LINES - 1, 23, 1, A_BOLD, 0, NULL);
-  mvchgat(LINES - 1, 36, 1, A_BOLD, 0, NULL);
-  mvchgat(LINES - 1, 43, 1, A_BOLD, 0, NULL);
-  mvchgat(LINES - 1, 50, 1, A_BOLD, 0, NULL);
-  mvchgat(LINES - 1, 57, 1, A_BOLD, 0, NULL);
-  mvchgat(LINES - 1, 65, 1, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 34, 1, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 39, 1, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 44, 1, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 49, 1, A_BOLD, 0, NULL);
+  mvchgat(LINES - 1, 55, 1, A_BOLD, 0, NULL);
 }
 
 
